@@ -415,7 +415,7 @@ except Exception:
 	argv := uintptr(unsafe.Pointer(&cArgs[0]))
 	ret, _, _ := pyMainProc.Call(uintptr(argc), argv)
 	if ret != 0 {
-		MessageBox("错误", "执行失败, cmd 运行 run.bat 查看报错信息,\n或设置hide_cmd为False重新编译然后控制台运行")
+		MessageBox("错误", "执行失败,设置hide_cmd为False重新编译然后控制台运行\n或设置auto_py_pyc=False, embed_exe=True，然后cmd 运行 run.bat 查看报错信息")
 	}
 	// 确保 Python 环境被正确清理
 	finalize, _ := pythonDll.FindProc("Py_FinalizeEx")

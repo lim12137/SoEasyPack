@@ -163,22 +163,32 @@ def copy_embed_depend(save_dir, base_env_dir):
     # # 复制运行嵌入exe所需依赖项
     py_files = ('hmac', 'secrets', 'struct', 'base64', 'warnings', 'hashlib', 'random',
                 'bisect', 'contextlib', 'zipfile', 'posixpath', 'shutil', 'fnmatch', 'threading',
-                '_weakrefset')
+                '_weakrefset', 'signal')
+    not_exists_files = []
     for py_file in py_files:
         to_save_path = Path.joinpath(Path(save_dir), f"rundep/Lib/{py_file}.py")
         if not os.path.exists(to_save_path):
             py_file_path = Path.joinpath(Path(base_env_dir), f"Lib/{py_file}.py")
-            shutil.copyfile(py_file_path, to_save_path)
+            if os.path.exists(py_file_path):
+                shutil.copyfile(py_file_path, to_save_path)
+            else:
+                not_exists_files.append(py_file)
+    # # python3.12的zipfile是个包不是模块
+    for py_file in not_exists_files:
+        py_file_dir = Path.joinpath(Path(base_env_dir), f"Lib/{py_file}")
+        if py_file_dir.is_dir():
+            to_save_dir = Path.joinpath(Path(save_dir), f"rundep/Lib/{py_file}")
+            shutil.copytree(py_file_dir, to_save_dir, dirs_exist_ok=True)
 
-    encodings_cp437_path = Path.joinpath(Path(base_env_dir), 'Lib/encodings/cp437.py')
-    to_cp437_path = Path.joinpath(Path(save_dir), f"rundep/Lib/encodings/cp437.py")
-    shutil.copyfile(encodings_cp437_path, to_cp437_path)
+    encodings_files = ('cp437', 'gbk')
+    for encodings_file in encodings_files:
+        encodings_file_path = Path.joinpath(Path(base_env_dir), f"Lib/encodings/{encodings_file}.py")
+        to_encodings_file_path = Path.joinpath(Path(save_dir), f"rundep/Lib/encodings/{encodings_file}.py")
+        shutil.copyfile(encodings_file_path, to_encodings_file_path)
 
-    multiprocessing_dir = Path.joinpath(Path(save_dir), 'rundep/Lib/multiprocessing')
-    os.makedirs(multiprocessing_dir, exist_ok=True)
-    shared_memory_path = Path.joinpath(Path(base_env_dir), 'Lib/multiprocessing/shared_memory.py')
-    to_shared_memory_path = Path.joinpath(multiprocessing_dir, 'shared_memory.py')
-    shutil.copyfile(shared_memory_path, to_shared_memory_path)
+    multiprocessing_dir = Path.joinpath(Path(base_env_dir), 'Lib/multiprocessing')
+    to_multiprocessing_dir = Path.joinpath(Path(save_dir), 'rundep/Lib/multiprocessing')
+    shutil.copytree(multiprocessing_dir, to_multiprocessing_dir, dirs_exist_ok=True)
 
     importlib_dir = Path.joinpath(Path(base_env_dir), 'Lib/importlib')
     to_importlib_dir = Path.joinpath(Path(save_dir), 'rundep/Lib/importlib')
