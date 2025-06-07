@@ -483,7 +483,7 @@ def to_pack(main_py_path: str, save_dir: str = None,
             auto_py_pyd: bool = False, embed_exe: bool = False, onefile: bool = False,
             monitoring_time: int = 18, uac: bool = False, requirements_path: str = None,
             except_packages: [str] = None, winres_json_path: str = None, delay_time: int = 3,
-            all_pyc_zip: bool = False, pip_source: str = None,
+            all_pyc_zip: bool = False, pip_source: str = None, enable_slim: bool = True,
             **kwargs: KwargsType) -> None:
     """
     :param main_py_path:主入口py文件路径
@@ -492,7 +492,7 @@ def to_pack(main_py_path: str, save_dir: str = None,
     :param png_path: exe图标路径
     :param hide_cmd:是否显示控制台窗口
     :param pack_mode:0/快速打包模式：监控分析依赖文件，然后复制依赖，不用再瘦身，适合非虚拟环境（虚拟环境也可）。
-    1/普通模式：先复制python环境依赖包，然后监控分析依赖文件，再进行项目瘦身,会保存被移除的文件，
+    1/普通模式：先复制python环境依赖包，然后监控分析依赖文件，可选择是否进行项目瘦身,会保存被移除的文件，
     因为会复制整个site-packages文件夹，所以不建议在非虚拟环境使用，
     2/轻量模式，不复制site-packages文件夹，第一次启动程序自动pip下载依赖包
     3/ast模式
@@ -514,6 +514,7 @@ def to_pack(main_py_path: str, save_dir: str = None,
     :param delay_time: 启动监控工具后延时几秒启动用户程序
     :param all_pyc_zip: 把所有.pyc文件压缩进zip
     :param pip_source: 轻量模式pip下载源地址，默认为 https://pypi.tuna.tsinghua.edu.cn/simple
+    :param enable_slim: 是否启用项目瘦身功能（仅在pack_mode=1时有效），默认为True
     :param kwargs: file_version: str, product_name: str, company: str
     :return:
     """
@@ -558,7 +559,7 @@ def to_pack(main_py_path: str, save_dir: str = None,
 
     new_main_py_path = copy_py_script(main_py_path, save_dir)
 
-    if pack_mode == 1:
+    if pack_mode == 1 and enable_slim:
         to_slim_file(new_main_py_path, check_dir=rundep_dir, project_dir=save_dir, monitoring_time=monitoring_time,
                      pack_mode=pack_mode, delay_time=delay_time)
     elif pack_mode == 2:

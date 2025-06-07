@@ -61,12 +61,17 @@ soeasypack is available on PyPI. You can install it through pip:
     - 1.打包项目
     ```python
     from soeasypack import to_pack
-    
+
     save_dir = r'C:\save_dir'
-    main_py_path = r'C:\my_project\main.py' 
+    main_py_path = r'C:\my_project\main.py'
     exe_name = '大都督'
-    to_pack(main_py_path, save_dir, pack_mode=0, embed_exe=False,exe_name=exe_name, 
-            pyc_optimize=1, except_packages=['numpy']) 
+    # 普通打包，启用瘦身功能（默认）
+    to_pack(main_py_path, save_dir, pack_mode=1, embed_exe=False, exe_name=exe_name,
+            pyc_optimize=1, except_packages=['numpy'])
+
+    # 普通打包，禁用瘦身功能
+    to_pack(main_py_path, save_dir, pack_mode=1, embed_exe=False, exe_name=exe_name,
+            pyc_optimize=1, except_packages=['numpy'], enable_slim=False)
     ```
     - 2.项目瘦身
     ```python
