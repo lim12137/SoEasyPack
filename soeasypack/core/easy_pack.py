@@ -21,7 +21,8 @@ from concurrent.futures import as_completed, ThreadPoolExecutor
 
 from .my_logger import my_logger
 from .py_to_pyd import to_pyd
-from .slimfile import to_slim_file, check_dependency_files
+# 移除瘦身功能导入
+# from .slimfile import to_slim_file, check_dependency_files
 
 
 class KwargsType(TypedDict, total=False):
@@ -80,39 +81,10 @@ def copy_py_env(save_dir, main_run_path=None, pack_mode=0, monitoring_time=18, e
         is_go = input(f"当前你的环境：非虚拟环境，{current_env_dir}, 可能会打包无用的依赖文件！若继续操作，请输入Y或y：")
         if is_go.lower() != 'y':
             sys.exit()
-    mode_info = ("快速模式", "普通模式", "轻量模式", "ast模式")
-    my_logger.info(f"当前模式：{mode_info[pack_mode]}")
-    if pack_mode in (0, 3):
-        dependency_files = check_dependency_files(main_run_path, save_dir, pack_mode=pack_mode,
-                                                  monitoring_time=monitoring_time, except_packages=except_packages)
-        if pack_mode == 3 and not embed_exe:
-            dependency_files.add(os.path.join(base_env_dir, 'python.exe'))
-        rundep_dir = Path.joinpath(Path(save_dir), 'rundep').resolve()
-        my_logger.info("复制python环境...")
-        with ThreadPoolExecutor() as executor:
-            futures = []
-            current_env_path = Path(current_env_dir).resolve()
-            base_env_path = base_env_dir.resolve()
-            for dependency_file in dependency_files:
-                dep_path = Path(dependency_file).resolve()
-                if current_env_path in dep_path.parents:
-                    relative_path = dep_path.relative_to(current_env_path)
-                    dependency_file_ = rundep_dir / relative_path
-                else:
-                    relative_path = dep_path.relative_to(base_env_path)
-                    dependency_file_ = rundep_dir / relative_path
-
-                if os.path.exists(dependency_file):
-                    to_save_dir = os.path.dirname(dependency_file_)
-                    os.makedirs(to_save_dir, exist_ok=True)
-                    futures.append(executor.submit(copy_file, dependency_file, dependency_file_))
-            # 等待所有复制任务完成
-            for future in as_completed(futures):
-                try:
-                    future.result()  # 获取结果，捕获任务中的异常
-                except Exception as e:
-                    my_logger.error(f"复制线程出错: {e}")
-    elif pack_mode in (1, 2):
+    mode_info = {1: "普通模式", 2: "轻量模式"}
+    my_logger.info(f"当前模式：{mode_info.get(pack_mode, '未知模式')}")
+    # 移除快速模式(pack_mode=0)和ast模式(pack_mode=3)，只保留普通模式(1)和轻量模式(2)
+    if pack_mode in (1, 2):
         my_logger.info("复制python环境...")
         dest = Path.joinpath(Path(save_dir), 'rundep')
 
@@ -478,12 +450,12 @@ def py_to_pyc(dest_dir, optimize):
 
 def to_pack(main_py_path: str, save_dir: str = None,
             exe_name: str = 'main', png_path: str = None, hide_cmd: bool = True,
-            pack_mode: Literal[0, 1, 2, 3] = 0, force_copy_env: bool = False,
-            auto_py_pyc: bool = True, pyc_optimize: Literal[-1, 0, 1, 2] = 1,
+            pack_mode: Literal[1, 2] = 1, force_copy_env: bool = False,
+            auto_py_pyc: bool = False, pyc_optimize: Literal[-1, 0, 1, 2] = 1,
             auto_py_pyd: bool = False, embed_exe: bool = False, onefile: bool = False,
             monitoring_time: int = 18, uac: bool = False, requirements_path: str = None,
             except_packages: [str] = None, winres_json_path: str = None, delay_time: int = 3,
-            all_pyc_zip: bool = False, pip_source: str = None, enable_slim: bool = True,
+            all_pyc_zip: bool = False, pip_source: str = None, enable_slim: bool = False,
             **kwargs: KwargsType) -> None:
     """
     :param main_py_path:主入口py文件路径
@@ -491,13 +463,10 @@ def to_pack(main_py_path: str, save_dir: str = None,
     :param exe_name:生成的exe文件名字
     :param png_path: exe图标路径
     :param hide_cmd:是否显示控制台窗口
-    :param pack_mode:0/快速打包模式：监控分析依赖文件，然后复制依赖，不用再瘦身，适合非虚拟环境（虚拟环境也可）。
-    1/普通模式：先复制python环境依赖包，然后监控分析依赖文件，可选择是否进行项目瘦身,会保存被移除的文件，
-    因为会复制整个site-packages文件夹，所以不建议在非虚拟环境使用，
-    2/轻量模式，不复制site-packages文件夹，第一次启动程序自动pip下载依赖包
-    3/ast模式
+    :param pack_mode:1/普通模式：复制完整的python环境依赖包，适合虚拟环境使用
+    2/轻量模式：不复制site-packages文件夹，第一次启动程序自动pip下载依赖包
     :param force_copy_env: 强行每次复制python环境依赖包
-    :param auto_py_pyc：知否把所有py转为pyc
+    :param auto_py_pyc：是否把所有py转为pyc（已禁用，保留参数兼容性）
     :param pyc_optimize: pyc优化级别，
     -1：使用当前解释器的优化级别，
     0：没有优化，
@@ -514,7 +483,7 @@ def to_pack(main_py_path: str, save_dir: str = None,
     :param delay_time: 启动监控工具后延时几秒启动用户程序
     :param all_pyc_zip: 把所有.pyc文件压缩进zip
     :param pip_source: 轻量模式pip下载源地址，默认为 https://pypi.tuna.tsinghua.edu.cn/simple
-    :param enable_slim: 是否启用项目瘦身功能（仅在pack_mode=1时有效），默认为True
+    :param enable_slim: 是否启用项目瘦身功能（已禁用，保留参数兼容性）
     :param kwargs: file_version: str, product_name: str, company: str
     :return:
     """
@@ -523,8 +492,8 @@ def to_pack(main_py_path: str, save_dir: str = None,
         my_logger.error('save_dir不能是main_py_path所在目录')
         return
 
-    if pack_mode not in (0, 1, 2, 3):
-        my_logger.error('pack_mode参数值只限于0, 1, 2, 3')
+    if pack_mode not in (1, 2):
+        my_logger.error('pack_mode参数值只限于1(普通模式), 2(轻量模式)')
         return
 
     if not os.path.exists(main_py_path):
@@ -559,10 +528,11 @@ def to_pack(main_py_path: str, save_dir: str = None,
 
     new_main_py_path = copy_py_script(main_py_path, save_dir)
 
-    if pack_mode == 1 and enable_slim:
-        to_slim_file(new_main_py_path, check_dir=rundep_dir, project_dir=save_dir, monitoring_time=monitoring_time,
-                     pack_mode=pack_mode, delay_time=delay_time)
-    elif pack_mode == 2:
+    # 移除瘦身功能调用
+    # if pack_mode == 1 and enable_slim:
+    #     to_slim_file(new_main_py_path, check_dir=rundep_dir, project_dir=save_dir, monitoring_time=monitoring_time,
+    #                  pack_mode=pack_mode, delay_time=delay_time)
+    if pack_mode == 2:
         my_logger.info("复制requirements.txt")
         if requirements_path:
             save_requirements_path = Path.joinpath(Path(save_dir), 'rundep/AppData/requirements.txt')
@@ -587,7 +557,12 @@ def to_pack(main_py_path: str, save_dir: str = None,
         except Exception as e:
             my_logger.error(f"转pyd出错：{e}")
 
-    if auto_py_pyc or embed_exe or onefile:
+    # 移除pyc自动转换功能
+    # if auto_py_pyc or embed_exe or onefile:
+    #     py_to_pyc(rundep_dir, pyc_optimize)
+
+    # 只在embed_exe或onefile模式下才转换pyc（保持基本功能）
+    if embed_exe or onefile:
         py_to_pyc(rundep_dir, pyc_optimize)
 
     if not (embed_exe or onefile):
